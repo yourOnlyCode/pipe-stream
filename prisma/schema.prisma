@@ -1,0 +1,66 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String
+  avatarUrl String?
+  role      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  createdPipestreams Pipestream[]       @relation("PipestreamCreator")
+  hierarchyNodes     HierarchyNode[]
+  feedback           Feedback[]
+}
+
+model Pipestream {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  goal        String
+  deadline    DateTime?
+  creatorId   String
+  creator     User     @relation("PipestreamCreator", fields: [creatorId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  hierarchy HierarchyNode[]
+  feedback  Feedback[]
+}
+
+model HierarchyNode {
+  id           String   @id @default(uuid())
+  pipestreamId String
+  pipestream   Pipestream @relation(fields: [pipestreamId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  parentId     String?
+  parent       HierarchyNode?  @relation("HierarchyTree", fields: [parentId], references: [id])
+  children     HierarchyNode[] @relation("HierarchyTree")
+  level        Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  @@unique([pipestreamId, userId])
+}
+
+model Feedback {
+  id           String   @id @default(uuid())
+  pipestreamId String
+  pipestream   Pipestream @relation(fields: [pipestreamId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  confidence   Int
+  comment      String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([pipestreamId, userId])
+}
